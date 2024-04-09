@@ -1,4 +1,4 @@
-package main
+package manager
 
 import (
 	"context"
@@ -23,8 +23,8 @@ type DepositContract struct {
 	Private string
 	Public  string
 
-	client     *ethclient.Client
-	transactor *bind.TransactOpts
+	Client     *ethclient.Client
+	Transactor *bind.TransactOpts
 
 	Ctx           context.Context
 	Address       common.Address
@@ -45,12 +45,12 @@ func NewDepositContract(ctx *cli.Context, url string, chi int64, private string,
 	}
 }
 
-func (d *DepositContract) init(ctx *cli.Context) {
+func (d *DepositContract) Init(ctx *cli.Context) {
 	var (
 		err     error
 		PKBytes []byte
 	)
-	d.client, err = ethclient.Dial(d.URL)
+	d.Client, err = ethclient.Dial(d.URL)
 	//d.client.Client().
 	if err != nil {
 		log.Errorf("Failed to dial %s: %v\n", d.URL, err)
@@ -66,17 +66,17 @@ func (d *DepositContract) init(ctx *cli.Context) {
 	log.Info("PK read")
 
 	privateKey := crypto.ToECDSAUnsafe(PKBytes)
-	d.transactor, err = bind.NewKeyedTransactorWithChainID(privateKey, big.NewInt(d.ChainID))
+	d.Transactor, err = bind.NewKeyedTransactorWithChainID(privateKey, big.NewInt(d.ChainID))
 	if err != nil {
-		log.Errorf("Failed to build transactor: %v\n", err)
+		log.Errorf("Failed to build Transactor: %v\n", err)
 		ctx.Err()
 	}
 
 }
 
 func (d *DepositContract) Deploy(ctx *cli.Context) error {
-	d.init(ctx)
-	addr, tx, ctr, err := contract.DeployContract(d.transactor, d.client)
+	d.Init(ctx)
+	addr, tx, ctr, err := contract.DeployContract(d.Transactor, d.Client)
 	if err != nil {
 		return err
 	}
@@ -88,9 +88,9 @@ func (d *DepositContract) Deploy(ctx *cli.Context) error {
 }
 
 func (d *DepositContract) Bind(ctx *cli.Context, ctrAddr common.Address) {
-	d.init(ctx)
+	d.Init(ctx)
 
-	ctr, err := contract.NewContract(ctrAddr, d.client)
+	ctr, err := contract.NewContract(ctrAddr, d.Client)
 	if err != nil {
 		log.Fatalf("Failed to bind contract, err: %s", err)
 		ctx.Err()

@@ -1,4 +1,4 @@
-package main
+package deposit
 
 import (
 	"encoding/json"
@@ -10,6 +10,8 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+
+	"depositter/manager"
 )
 
 type DepositJSON struct {
@@ -62,8 +64,8 @@ func (p *Parser) Parse(ctx *cli.Context, filename string) {
 	}
 }
 
-func (p *Parser) BuildBatch(ctx *cli.Context, dc *DepositContract) [][]rpc.BatchElem {
-	nonce, err := dc.client.PendingNonceAt(ctx.Context, dc.PublicCommon)
+func (p *Parser) BuildBatch(ctx *cli.Context, dc *manager.DepositContract) [][]rpc.BatchElem {
+	nonce, err := dc.Client.PendingNonceAt(ctx.Context, dc.PublicCommon)
 	batch := make([][]rpc.BatchElem, len(p.Deposits)/500+1)
 	for i := 0; i < len(batch); i++ {
 		batch[i] = make([]rpc.BatchElem, 500)
@@ -77,14 +79,14 @@ func (p *Parser) BuildBatch(ctx *cli.Context, dc *DepositContract) [][]rpc.Batch
 		index int = 0
 	)
 
-	dc.transactor.NoSend = true
-	dc.transactor.Value, _ = new(big.Int).SetString("8192000000000000000000", 10)
-	dc.transactor.GasLimit = 2_000_000
+	dc.Transactor.NoSend = true
+	dc.Transactor.Value, _ = new(big.Int).SetString("8192000000000000000000", 10)
+	dc.Transactor.GasLimit = 2_000_000
 	for i, d := range p.Deposits {
-		dc.transactor.Nonce = big.NewInt(int64(nonce))
+		dc.Transactor.Nonce = big.NewInt(int64(nonce))
 		nonce++
 		tx, err := dc.Contract.Deposit(
-			dc.transactor,
+			dc.Transactor,
 			d.PubKey,
 			d.WithdrawalCredential,
 			d.ContractAddress,
