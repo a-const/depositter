@@ -2,3 +2,6 @@
 deposit.sh
 contract/
 byte-gen/
+**/bin/*
+depositter
+*.deb

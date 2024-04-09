@@ -1,0 +1,5 @@
+Package: depositter
+Architecture: amd64
+Maintainer: Konstantin Astankov <konstantin.astankov@softconstruct.com>
+Version: 1.0
+Description: FTN Depositter
