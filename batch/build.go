@@ -27,9 +27,11 @@ type Builder struct {
 	nonce *atomic.Int64
 
 	batch [][]rpc.BatchElem
+	part  int
+	index int
 }
 
-func NewBuilder(ctx context.Context, dc *manager.DepositContract) *Builder {
+func NewBuilder(ctx context.Context, dc *manager.DepositContract, length int) *Builder {
 	b := &Builder{
 		dc: dc,
 		pool: &sync.Pool{
@@ -43,10 +45,12 @@ func NewBuilder(ctx context.Context, dc *manager.DepositContract) *Builder {
 		log.Fatal("Cannot retreive nonce")
 	}
 	b.nonce.Add(int64(n))
-	b.batch = make([][]rpc.BatchElem, len(p.Deposits)/500+1)
+	b.batch = make([][]rpc.BatchElem, length/500+1)
 	for i := 0; i < len(b.batch); i++ {
 		b.batch[i] = make([]rpc.BatchElem, 500)
 	}
+	b.part = 0
+	b.index = 0
 	return b
 }
 
@@ -103,8 +107,13 @@ func (b *Builder) MakeElem() {
 
 func (b *Builder) AppendElem() {
 	for elem := range b.elemChan {
-
+		b.batch[b.part][b.index] = elem
+		log.Infof("Building batch. Batch[%d][%d]", b.part, b.index)
+		b.index++
+		if b.index >= 500 {
+			b.index = 0
+			b.part++
+		}
 	}
-	elem := <-b.elemChan
 
 }
