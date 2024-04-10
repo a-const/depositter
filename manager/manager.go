@@ -74,6 +74,19 @@ func (d *DepositContract) Init(ctx *cli.Context) {
 
 }
 
+func (d *DepositContract) CopyTransactor() *bind.TransactOpts {
+	PKBytes, err := hex.DecodeString(d.Private)
+	if err != nil {
+		log.Errorf("Failed to decode string to hex: %v\n", err)
+	}
+	privateKey := crypto.ToECDSAUnsafe(PKBytes)
+	transactor, err := bind.NewKeyedTransactorWithChainID(privateKey, big.NewInt(d.ChainID))
+	if err != nil {
+		log.Errorf("Failed to build Transactor: %v\n", err)
+	}
+	return transactor
+}
+
 func (d *DepositContract) Deploy(ctx *cli.Context) error {
 	d.Init(ctx)
 	addr, tx, ctr, err := contract.DeployContract(d.Transactor, d.Client)
