@@ -5,3 +5,4 @@ byte-gen/
 **/bin/*
 depositter
 *.deb
+deposit_data*.json
