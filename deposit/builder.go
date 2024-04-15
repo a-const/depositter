@@ -1,8 +1,7 @@
-package batch
+package deposit
 
 import (
 	"context"
-	"depositter/deposit"
 	"depositter/manager"
 	"math/big"
 	"sync"
@@ -16,14 +15,10 @@ import (
 )
 
 type Builder struct {
-	pool *sync.Pool
-	wg   *sync.WaitGroup
-	dc   *manager.DepositContract
-
-	depChan  chan *deposit.Deposit
-	txChan   chan *types.Transaction
-	elemChan chan rpc.BatchElem
-
+	pool  *sync.Pool
+	wg    *sync.WaitGroup
+	dc    *manager.DepositContract
+	p     *Parser
 	nonce *atomic.Int64
 
 	batch [][]rpc.BatchElem
@@ -31,7 +26,7 @@ type Builder struct {
 	index int
 }
 
-func NewBuilder(ctx context.Context, dc *manager.DepositContract, length int) *Builder {
+func NewBuilder(ctx context.Context, dc *manager.DepositContract, p *Parser, length int) *Builder {
 	b := &Builder{
 		dc: dc,
 		pool: &sync.Pool{
@@ -44,6 +39,7 @@ func NewBuilder(ctx context.Context, dc *manager.DepositContract, length int) *B
 	if err != nil {
 		log.Fatal("Cannot retreive nonce")
 	}
+	b.nonce = &atomic.Int64{}
 	b.nonce.Add(int64(n))
 	b.batch = make([][]rpc.BatchElem, length/500+1)
 	for i := 0; i < len(b.batch); i++ {
@@ -51,7 +47,14 @@ func NewBuilder(ctx context.Context, dc *manager.DepositContract, length int) *B
 	}
 	b.part = 0
 	b.index = 0
+	b.p = p
 	return b
+}
+
+func (b *Builder) BuildBatch() [][]rpc.BatchElem {
+	input := b.Loader()
+	MakePipe(input, b.MakeTx, b.MakeElem, b.AppendElem)
+	return b.batch
 }
 
 func (b *Builder) get() *bind.TransactOpts {
@@ -62,13 +65,17 @@ func (b *Builder) put(txer *bind.TransactOpts) {
 	b.pool.Put(txer)
 }
 
-func (b *Builder) Worker() {
-	for in := range b.input {
-		b.MakeTx(in)
-	}
+func (b *Builder) Loader() chan *Deposit {
+	input := make(chan *Deposit, len(b.p.Deposits))
+	go func() {
+		for _, d := range b.p.Deposits {
+			input <- d
+		}
+	}()
+	return input
 }
 
-func (b *Builder) MakeTx(d *deposit.Deposit) {
+func (b *Builder) MakeTx(d *Deposit) *types.Transaction {
 	txor := b.get()
 	txor.NoSend = true
 	txor.Value, _ = new(big.Int).SetString("8192000000000000000000", 10)
@@ -87,11 +94,10 @@ func (b *Builder) MakeTx(d *deposit.Deposit) {
 		log.Errorf("Error building batch element. Error: %s", err)
 	}
 	b.put(txor)
-	b.txChan <- tx
+	return tx
 }
 
-func (b *Builder) MakeElem() {
-	tx := <-b.txChan
+func (b *Builder) MakeElem(tx *types.Transaction) rpc.BatchElem {
 	bin, err := tx.MarshalBinary()
 	if err != nil {
 		log.Error("Error marshaling tx to binary")
@@ -102,18 +108,15 @@ func (b *Builder) MakeElem() {
 		//Method: "eth_estimateGas",
 		Args: []any{hexutil.Encode(bin)},
 	}
-	b.elemChan <- elem
+	return elem
 }
 
-func (b *Builder) AppendElem() {
-	for elem := range b.elemChan {
-		b.batch[b.part][b.index] = elem
-		log.Infof("Building batch. Batch[%d][%d]", b.part, b.index)
-		b.index++
-		if b.index >= 500 {
-			b.index = 0
-			b.part++
-		}
+func (b *Builder) AppendElem(elem rpc.BatchElem) {
+	b.batch[b.part][b.index] = elem
+	log.Infof("Building batch. Batch[%d][%d]", b.part, b.index)
+	b.index++
+	if b.index >= 500 {
+		b.index = 0
+		b.part++
 	}
-
 }

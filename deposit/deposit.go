@@ -2,11 +2,9 @@ package deposit
 
 import (
 	"encoding/json"
-	"math/big"
 	"os"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rpc"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -65,55 +63,56 @@ func (p *Parser) Parse(ctx *cli.Context, filename string) {
 }
 
 func (p *Parser) BuildBatch(ctx *cli.Context, dc *manager.DepositContract) [][]rpc.BatchElem {
-	nonce, err := dc.Client.PendingNonceAt(ctx.Context, dc.PublicCommon)
-	batch := make([][]rpc.BatchElem, len(p.Deposits)/500+1)
-	for i := 0; i < len(batch); i++ {
-		batch[i] = make([]rpc.BatchElem, 500)
-	}
-	if err != nil {
-		log.Fatalf("Error retrieving pending nonce, err: %s", err)
-		ctx.Err()
-	}
-	var (
-		part  int = 0
-		index int = 0
-	)
+	return NewBuilder(ctx.Context, dc, p, len(p.Deposits)).BuildBatch()
+	// nonce, err := dc.Client.PendingNonceAt(ctx.Context, dc.PublicCommon)
+	// batch := make([][]rpc.BatchElem, len(p.Deposits)/500+1)
+	// for i := 0; i < len(batch); i++ {
+	// 	batch[i] = make([]rpc.BatchElem, 500)
+	// }
+	// if err != nil {
+	// 	log.Fatalf("Error retrieving pending nonce, err: %s", err)
+	// 	ctx.Err()
+	// }
+	// var (
+	// 	part  int = 0
+	// 	index int = 0
+	// )
 
-	dc.Transactor.NoSend = true
-	dc.Transactor.Value, _ = new(big.Int).SetString("8192000000000000000000", 10)
-	dc.Transactor.GasLimit = 2_000_000
-	for i, d := range p.Deposits {
-		dc.Transactor.Nonce = big.NewInt(int64(nonce))
-		nonce++
-		tx, err := dc.Contract.Deposit(
-			dc.Transactor,
-			d.PubKey,
-			d.WithdrawalCredential,
-			d.ContractAddress,
-			d.Signature,
-			d.DepositDataRoot,
-		)
-		if err != nil {
-			log.Errorf("Error building batch element with index: %d. Error: %s", i, err)
-		}
-		bin, err := tx.MarshalBinary()
-		if err != nil {
-			log.Error("Error marshaling tx to binary")
-		}
+	// dc.Transactor.NoSend = true
+	// dc.Transactor.Value, _ = new(big.Int).SetString("8192000000000000000000", 10)
+	// dc.Transactor.GasLimit = 2_000_000
+	// for i, d := range p.Deposits {
+	// 	dc.Transactor.Nonce = big.NewInt(int64(nonce))
+	// 	nonce++
+	// 	tx, err := dc.Contract.Deposit(
+	// 		dc.Transactor,
+	// 		d.PubKey,
+	// 		d.WithdrawalCredential,
+	// 		d.ContractAddress,
+	// 		d.Signature,
+	// 		d.DepositDataRoot,
+	// 	)
+	// 	if err != nil {
+	// 		log.Errorf("Error building batch element with index: %d. Error: %s", i, err)
+	// 	}
+	// 	bin, err := tx.MarshalBinary()
+	// 	if err != nil {
+	// 		log.Error("Error marshaling tx to binary")
+	// 	}
 
-		elem := rpc.BatchElem{
-			Method: "eth_sendRawTransaction",
-			//Method: "eth_estimateGas",
-			Args: []any{hexutil.Encode(bin)},
-		}
-		batch[part][index] = elem
-		log.Infof("Building batch. Index: %d Batch[%d][%d]", i, part, index)
-		index++
-		if index >= 500 {
-			index = 0
-			part++
-		}
-	}
-	log.Info("Bulding done!")
-	return batch
+	// 	elem := rpc.BatchElem{
+	// 		Method: "eth_sendRawTransaction",
+	// 		//Method: "eth_estimateGas",
+	// 		Args: []any{hexutil.Encode(bin)},
+	// 	}
+	// 	batch[part][index] = elem
+	// 	log.Infof("Building batch. Index: %d Batch[%d][%d]", i, part, index)
+	// 	index++
+	// 	if index >= 500 {
+	// 		index = 0
+	// 		part++
+	// 	}
+	// }
+	// log.Info("Bulding done!")
+	// return batch
 }
