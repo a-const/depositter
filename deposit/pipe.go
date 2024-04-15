@@ -1,6 +1,8 @@
 package deposit
 
 import (
+	"sync"
+
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
 )
@@ -17,12 +19,22 @@ type (
 func TxAddToPipe(tf TxFn) TxPipe {
 	return func(input chan *Deposit) chan *types.Transaction {
 		output := make(chan *types.Transaction)
+		var wg sync.WaitGroup
+		wg.Add(100)
 		go func() {
-			defer close(output)
-			for in := range input {
-				output <- tf(in)
-			}
+			wg.Wait()
+			close(output)
 		}()
+
+		for i := 0; i < 100; i++ {
+			go func() {
+				defer wg.Done()
+				for in := range input {
+					output <- tf(in)
+				}
+			}()
+		}
+
 		return output
 	}
 }
@@ -42,11 +54,9 @@ func BathcElemAddToPipe(tf MakeElemFn) MakeElemPipe {
 
 func AppendAddToPipe(tf AppendFn) AppendPipe {
 	return func(input chan rpc.BatchElem) {
-		go func() {
-			for in := range input {
-				tf(in)
-			}
-		}()
+		for in := range input {
+			tf(in)
+		}
 	}
 }
 

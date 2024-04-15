@@ -66,8 +66,9 @@ func (b *Builder) put(txer *bind.TransactOpts) {
 }
 
 func (b *Builder) Loader() chan *Deposit {
-	input := make(chan *Deposit, len(b.p.Deposits))
+	input := make(chan *Deposit)
 	go func() {
+		defer close(input)
 		for _, d := range b.p.Deposits {
 			input <- d
 		}
