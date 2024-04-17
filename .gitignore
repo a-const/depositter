@@ -1,5 +1,5 @@
 .vscode
-deposit.sh
+deposit*.sh
 contract/
 byte-gen/
 **/bin/*
