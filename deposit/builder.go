@@ -81,6 +81,7 @@ func (b *Builder) MakeTx(d *Deposit) *types.Transaction {
 	txor.NoSend = true
 	txor.Value, _ = new(big.Int).SetString("8192000000000000000000", 10)
 	txor.GasLimit = 2_000_000
+	txor.GasPrice = big.NewInt(21_000_000_000)
 	txor.Nonce = big.NewInt(b.nonce.Load())
 	b.nonce.Add(1)
 	tx, err := b.dc.Contract.Deposit(
