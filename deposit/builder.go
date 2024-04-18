@@ -15,15 +15,19 @@ import (
 )
 
 type Builder struct {
-	pool  *sync.Pool
-	wg    *sync.WaitGroup
-	dc    *manager.DepositContract
-	p     *Parser
-	nonce *atomic.Int64
+	pool       *sync.Pool
+	wg         *sync.WaitGroup
+	dc         *manager.DepositContract
+	p          *Parser
+	startNonce uint64
+	nonce      *atomic.Int64
 
 	batch [][]rpc.BatchElem
-	part  int
-	index int
+}
+
+type BatchElement struct {
+	elem  rpc.BatchElem
+	nonce uint64
 }
 
 func NewBuilder(ctx context.Context, dc *manager.DepositContract, p *Parser, length int) *Builder {
@@ -39,14 +43,14 @@ func NewBuilder(ctx context.Context, dc *manager.DepositContract, p *Parser, len
 	if err != nil {
 		log.Fatal("Cannot retreive nonce")
 	}
+	b.startNonce = n
 	b.nonce = &atomic.Int64{}
 	b.nonce.Add(int64(n))
 	b.batch = make([][]rpc.BatchElem, length/500+1)
 	for i := 0; i < len(b.batch); i++ {
 		b.batch[i] = make([]rpc.BatchElem, 500)
 	}
-	b.part = 0
-	b.index = 0
+
 	b.p = p
 	return b
 }
@@ -98,8 +102,9 @@ func (b *Builder) MakeTx(d *Deposit) *types.Transaction {
 	return tx
 }
 
-func (b *Builder) MakeElem(tx *types.Transaction) rpc.BatchElem {
+func (b *Builder) MakeElem(tx *types.Transaction) *BatchElement {
 	bin, err := tx.MarshalBinary()
+
 	if err != nil {
 		log.Error("Error marshaling tx to binary")
 	}
@@ -109,15 +114,16 @@ func (b *Builder) MakeElem(tx *types.Transaction) rpc.BatchElem {
 		//Method: "eth_estimateGas",
 		Args: []any{hexutil.Encode(bin)},
 	}
-	return elem
+
+	return &BatchElement{
+		elem:  elem,
+		nonce: tx.Nonce(),
+	}
 }
 
-func (b *Builder) AppendElem(elem rpc.BatchElem) {
-	b.batch[b.part][b.index] = elem
-	log.Infof("Building batch. Batch[%d][%d]", b.part, b.index)
-	b.index++
-	if b.index >= 500 {
-		b.index = 0
-		b.part++
-	}
+func (b *Builder) AppendElem(elem *BatchElement) {
+	part := (elem.nonce - b.startNonce) / 500
+	index := (elem.nonce - b.startNonce) % 500
+	b.batch[part][index] = elem.elem
+	log.Infof("Building batch. Batch[%d][%d]", part, index)
 }

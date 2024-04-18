@@ -4,16 +4,15 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/rpc"
 )
 
 type (
 	TxFn         func(*Deposit) *types.Transaction
 	TxPipe       func(chan *Deposit) chan *types.Transaction
-	MakeElemFn   func(*types.Transaction) rpc.BatchElem
-	MakeElemPipe func(chan *types.Transaction) chan rpc.BatchElem
-	AppendFn     func(rpc.BatchElem)
-	AppendPipe   func(chan rpc.BatchElem)
+	MakeElemFn   func(*types.Transaction) *BatchElement
+	MakeElemPipe func(chan *types.Transaction) chan *BatchElement
+	AppendFn     func(*BatchElement)
+	AppendPipe   func(chan *BatchElement)
 )
 
 func TxAddToPipe(tf TxFn) TxPipe {
@@ -40,8 +39,8 @@ func TxAddToPipe(tf TxFn) TxPipe {
 }
 
 func BathcElemAddToPipe(tf MakeElemFn) MakeElemPipe {
-	return func(input chan *types.Transaction) chan rpc.BatchElem {
-		output := make(chan rpc.BatchElem)
+	return func(input chan *types.Transaction) chan *BatchElement {
+		output := make(chan *BatchElement)
 		go func() {
 			defer close(output)
 			for in := range input {
@@ -53,7 +52,7 @@ func BathcElemAddToPipe(tf MakeElemFn) MakeElemPipe {
 }
 
 func AppendAddToPipe(tf AppendFn) AppendPipe {
-	return func(input chan rpc.BatchElem) {
+	return func(input chan *BatchElement) {
 		for in := range input {
 			tf(in)
 		}
