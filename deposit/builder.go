@@ -48,7 +48,8 @@ func NewBuilder(ctx context.Context, dc *manager.DepositContract, p *Parser, len
 	}
 	b.startNonce = n
 	b.nonce = &atomic.Int64{}
-	b.nonce.Add(int64(n))
+	b.nonce.Store(int64(n - 1))
+
 	b.batch = make([][]rpc.BatchElem, length/500+1)
 	for i := 0; i < len(b.batch); i++ {
 		b.batch[i] = make([]rpc.BatchElem, 500)
@@ -88,8 +89,7 @@ func (b *Builder) MakeTx(d *Deposit) *types.Transaction {
 	txor.NoSend = true
 	txor.Value, _ = new(big.Int).SetString("8192000000000000000000", 10)
 	txor.GasLimit = 2_000_000
-	txor.Nonce = big.NewInt(b.nonce.Load())
-	b.nonce.Add(1)
+	txor.Nonce = big.NewInt(b.nonce.Add(1))
 	tx, err := b.dc.Contract.Deposit(
 		txor,
 		d.PubKey,
