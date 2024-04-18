@@ -4,6 +4,7 @@ import (
 	"context"
 	"depositter/manager"
 	"math/big"
+	"slices"
 	"sync"
 	"sync/atomic"
 
@@ -15,12 +16,14 @@ import (
 )
 
 type Builder struct {
-	pool       *sync.Pool
-	wg         *sync.WaitGroup
-	dc         *manager.DepositContract
-	p          *Parser
+	pool *sync.Pool
+	wg   *sync.WaitGroup
+	dc   *manager.DepositContract
+	p    *Parser
+
 	startNonce uint64
 	nonce      *atomic.Int64
+	nonces     []uint64
 
 	batch [][]rpc.BatchElem
 }
@@ -50,7 +53,7 @@ func NewBuilder(ctx context.Context, dc *manager.DepositContract, p *Parser, len
 	for i := 0; i < len(b.batch); i++ {
 		b.batch[i] = make([]rpc.BatchElem, 500)
 	}
-
+	b.nonces = make([]uint64, 0, len(p.Deposits))
 	b.p = p
 	return b
 }
@@ -125,5 +128,26 @@ func (b *Builder) AppendElem(elem *BatchElement) {
 	part := (elem.nonce - b.startNonce) / 500
 	index := (elem.nonce - b.startNonce) % 500
 	b.batch[part][index] = elem.elem
-	log.Infof("Building batch. Batch[%d][%d]", part, index)
+	b.nonces = append(b.nonces, elem.nonce)
+	log.Infof("Building batch. Batch[%d][%d], nonce: %d", part, index, elem.nonce)
+}
+
+func (b *Builder) IsBatchValid() bool {
+	slices.SortFunc(b.nonces, func(a uint64, b uint64) int {
+		if a > b {
+			return 1
+		} else if a < b {
+			return -1
+		}
+		return 0
+	})
+	for i := 0; i < len(b.nonces)-1; i++ {
+		if b.nonces[i]+1 != b.nonces[i+1] {
+			log.Errorf("Found missing nonce! current value: %d , next value: %d\n", b.nonces[i], b.nonces[i+1])
+			//return false
+		}
+	}
+	log.Infof("%+v", b.nonces)
+	log.Info("Batch verified!")
+	return true
 }

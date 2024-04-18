@@ -63,5 +63,10 @@ func (p *Parser) Parse(ctx *cli.Context, filename string) {
 }
 
 func (p *Parser) BuildBatch(ctx *cli.Context, dc *manager.DepositContract) [][]rpc.BatchElem {
-	return NewBuilder(ctx.Context, dc, p, len(p.Deposits)).BuildBatch()
+	b := NewBuilder(ctx.Context, dc, p, len(p.Deposits))
+	btch := b.BuildBatch()
+	if !b.IsBatchValid() {
+		return nil
+	}
+	return btch
 }
