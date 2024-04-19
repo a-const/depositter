@@ -144,10 +144,9 @@ func (b *Builder) IsBatchValid() bool {
 	for i := 0; i < len(b.nonces)-1; i++ {
 		if b.nonces[i]+1 != b.nonces[i+1] {
 			log.Errorf("Found missing nonce! current value: %d , next value: %d\n", b.nonces[i], b.nonces[i+1])
-			//return false
+			return false
 		}
 	}
-	log.Infof("%+v", b.nonces)
 	log.Info("Batch verified!")
 	return true
 }
