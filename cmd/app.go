@@ -24,7 +24,7 @@ func NewApp() *App {
 	a.app.Commands = c.AppCommands
 	a.app.Name = "FTN Depositter"
 	a.app.Usage = "Tool for FTN deposits"
-	a.app.Version = "1.0"
+	a.app.Version = "1.1"
 	return a
 }
 

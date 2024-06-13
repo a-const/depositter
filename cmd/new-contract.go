@@ -13,7 +13,7 @@ func newContractCmd(ctx *cli.Context) error {
 		ctx.String(URLFlag.Name),
 		ctx.Int64(ChainIDFlag.Name),
 		ctx.String(PrivateFlag.Name),
-		ctx.String(PublicFlag.Name),
+		ctx.String(AddressFlag.Name),
 	)
 	dc.Deploy(ctx)
 	log.Infof("Contract created with address: %s", dc.Address.String())
@@ -28,5 +28,6 @@ func newContractCmd(ctx *cli.Context) error {
 		}
 
 	}
+	log.Info("Done!")
 	return nil
 }

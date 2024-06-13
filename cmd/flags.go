@@ -13,7 +13,7 @@ var (
 	URLFlag             *cli.StringFlag
 	ChainIDFlag         *cli.Int64Flag
 	PrivateFlag         *cli.StringFlag
-	PublicFlag          *cli.StringFlag
+	AddressFlag         *cli.StringFlag
 	DepositFileFlag     *cli.StringFlag
 	contractAddressFlag *cli.StringFlag
 )
@@ -32,12 +32,12 @@ func (f *Flags) SetAppFlags() {
 	PrivateFlag = &cli.StringFlag{
 		Required: true,
 		Name:     "private",
-		Usage:    "Private key of account, responsible for deploy and deposits",
+		Usage:    "Private key of account, responsible for deploy and deposits (without 0x prefix)",
 	}
-	PublicFlag = &cli.StringFlag{
+	AddressFlag = &cli.StringFlag{
 		Required: true,
-		Name:     "public",
-		Usage:    "Public key of account, responsible for deploy and deposits",
+		Name:     "address",
+		Usage:    "Account, responsible for deploy and deposits",
 	}
 	DepositFileFlag = &cli.StringFlag{
 		Required: true,
@@ -49,7 +49,7 @@ func (f *Flags) SetAppFlags() {
 		URLFlag,
 		ChainIDFlag,
 		PrivateFlag,
-		PublicFlag,
+		AddressFlag,
 		DepositFileFlag,
 	}
 }

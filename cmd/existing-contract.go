@@ -14,7 +14,7 @@ func existingContractCmd(ctx *cli.Context) error {
 		ctx.String(URLFlag.Name),
 		ctx.Int64(ChainIDFlag.Name),
 		ctx.String(PrivateFlag.Name),
-		ctx.String(PublicFlag.Name),
+		ctx.String(AddressFlag.Name),
 	)
 
 	ctrAddr := common.Hex2Bytes(ctx.String(contractAddressFlag.Name))
@@ -30,6 +30,6 @@ func existingContractCmd(ctx *cli.Context) error {
 			log.Error("Error sending txs")
 		}
 	}
-
+	log.Info("Done!")
 	return nil
 }

@@ -4,9 +4,10 @@ import (
 	"context"
 	"depositter/manager"
 	"math/big"
-	"slices"
 	"sync"
 	"sync/atomic"
+
+	"golang.org/x/exp/slices"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -17,7 +18,6 @@ import (
 
 type Builder struct {
 	pool *sync.Pool
-	wg   *sync.WaitGroup
 	dc   *manager.DepositContract
 	p    *Parser
 
@@ -101,6 +101,7 @@ func (b *Builder) MakeTx(d *Deposit) *types.Transaction {
 	if err != nil {
 		log.Errorf("Error building batch element. Error: %s", err)
 	}
+	log.Printf("TX Hash: %s", tx.Hash().String())
 	b.put(txor)
 	return tx
 }
